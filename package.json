@@ -1,0 +1,29 @@
+{
+    "name": "vscode-morrr",
+    "displayName": "vscode-morrr",
+    "description": "Auto-inject RMarkdown params into R terminal when an Rmd file is activated",
+    "version": "0.0.1",
+    "publisher": "tomlink",
+    "engines": {
+        "vscode": "^1.75.0"
+    },
+    "categories": ["Other"],
+    "activationEvents": ["onLanguage:rmd"],
+    "main": "./out/extension.js",
+    "contributes": {},
+    "scripts": {
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "package": "vsce package"
+    },
+    "dependencies": {
+        "js-yaml": "^4.1.0"
+    },
+    "devDependencies": {
+        "@types/js-yaml": "^4.0.9",
+        "@types/node": "^18.0.0",
+        "@types/vscode": "^1.75.0",
+        "typescript": "^5.0.0",
+        "@vscode/vsce": "^2.0.0"
+    }
+}
