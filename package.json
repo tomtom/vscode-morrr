@@ -4,6 +4,11 @@
     "description": "Auto-inject RMarkdown params into R terminal when an Rmd file is activated",
     "version": "0.0.1",
     "publisher": "tomlink",
+    "license": "GPL-3.0-only",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/tomtom/vscode-morrr.git"
+    },
     "engines": {
         "vscode": "^1.75.0"
     },
