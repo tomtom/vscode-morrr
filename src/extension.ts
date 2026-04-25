@@ -51,6 +51,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const handleEditor = (editor: vscode.TextEditor | undefined) => {
         if (!editor) return;
+        const enabled = vscode.workspace.getConfiguration('vscode-morrr').get<boolean>('enabled', true);
+        if (!enabled) return;
         const doc = editor.document;
         if (doc.languageId !== 'rmd' && !/\.Rmd$/i.test(doc.fileName)) return;
         if (doc.uri.fsPath === lastPath) return;

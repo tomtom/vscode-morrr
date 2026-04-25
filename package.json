@@ -15,7 +15,18 @@
     "categories": ["Other"],
     "activationEvents": ["onLanguage:rmd"],
     "main": "./out/extension.js",
-    "contributes": {},
+    "contributes": {
+        "configuration": {
+            "title": "vscode-morrr",
+            "properties": {
+                "vscode-morrr.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable automatic injection of RMarkdown params into the R terminal when an Rmd file is activated."
+                }
+            }
+        }
+    },
     "scripts": {
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
