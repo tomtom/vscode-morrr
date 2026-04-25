@@ -17,7 +17,7 @@
     "main": "./out/extension.js",
     "contributes": {
         "configuration": {
-            "title": "vscode-morrr",
+            "title": "R (morrr)",
             "properties": {
                 "vscode-morrr.enabled": {
                     "type": "boolean",
