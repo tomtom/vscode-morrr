@@ -2,7 +2,7 @@ NAME    := $(shell node -p "require('./package.json').name")
 VERSION := $(shell node -p "require('./package.json').version")
 VSIX    := $(NAME)-$(VERSION).vsix
 
-.PHONY: vsix install
+.PHONY: vsix install push
 
 vsix: $(VSIX)
 
@@ -12,3 +12,6 @@ $(VSIX):
 
 install: $(VSIX)
 	code --install-extension $(VSIX)
+
+push:
+	git push origin main
