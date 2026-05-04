@@ -12,8 +12,12 @@
     "engines": {
         "vscode": "^1.75.0"
     },
-    "categories": ["Other"],
-    "activationEvents": ["onLanguage:rmd"],
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onLanguage:rmd"
+    ],
     "main": "./out/extension.js",
     "contributes": {
         "configuration": {
@@ -30,16 +34,20 @@
     "scripts": {
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "package": "vsce package"
+        "package": "vsce package",
+        "test": "jest"
     },
     "dependencies": {
         "js-yaml": "^4.1.0"
     },
     "devDependencies": {
+        "@types/jest": "^30.0.0",
         "@types/js-yaml": "^4.0.9",
         "@types/node": "^18.0.0",
         "@types/vscode": "^1.75.0",
-        "typescript": "^5.0.0",
-        "@vscode/vsce": "^2.0.0"
+        "@vscode/vsce": "^2.0.0",
+        "jest": "^30.3.0",
+        "ts-jest": "^29.4.9",
+        "typescript": "^5.0.0"
     }
 }
