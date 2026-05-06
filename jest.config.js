@@ -7,4 +7,6 @@ module.exports = {
         vscode: '<rootDir>/src/__mocks__/vscode.ts',
     },
     testMatch: ['**/src/tests/**/*.test.ts'],
+    testPathIgnorePatterns: ['/node_modules/', '/out/'],
+    modulePathIgnorePatterns: ['/out/'],
 };

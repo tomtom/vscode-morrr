@@ -9,7 +9,9 @@ export const window = {
     activeTerminal: undefined as Terminal | undefined,
     terminals: [] as Terminal[],
     activeTextEditor: undefined as TextEditor | undefined,
+    state: { focused: true },
     onDidChangeActiveTextEditor: jest.fn(() => ({ dispose: jest.fn() })),
+    onDidChangeWindowState: jest.fn(() => ({ dispose: jest.fn() })),
     onDidCloseTerminal: jest.fn(() => ({ dispose: jest.fn() })),
 };
 

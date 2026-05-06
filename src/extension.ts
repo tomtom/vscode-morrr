@@ -125,6 +125,7 @@ export function shouldInject(
 /**
  * Activates the extension, registering event listeners that automatically
  * inject RMarkdown params into an R terminal when an Rmd file is focused.
+ * Injection only occurs while the VS Code window has focus.
  *
  * @param context - The VS Code extension context used to register disposables.
  * @returns void
@@ -136,6 +137,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const handleEditor = (editor: vscode.TextEditor | undefined) => {
         if (!editor) return;
+        if (!vscode.window.state.focused) return;
         const enabled = vscode.workspace.getConfiguration('vscode-morrr').get<boolean>('enabled', true);
         if (!enabled) return;
         const doc = editor.document;
@@ -153,7 +155,10 @@ export function activate(context: vscode.ExtensionContext): void {
     };
 
     context.subscriptions.push(
-        vscode.window.onDidChangeActiveTextEditor(handleEditor)
+        vscode.window.onDidChangeActiveTextEditor(handleEditor),
+        vscode.window.onDidChangeWindowState(state => {
+            if (state.focused) handleEditor(vscode.window.activeTextEditor);
+        }),
     );
 
     handleEditor(vscode.window.activeTextEditor);

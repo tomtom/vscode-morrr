@@ -1,12 +1,14 @@
 /**
- * Tests for the shouldInject cache helper and the core params-injection logic.
+ * Tests for the shouldInject cache helper and the core params-injection logic,
+ * including the window-focus guard introduced in issue 2.
  *
  * VS Code API is fully stubbed via src/__mocks__/vscode.ts so no real extension
  * host is required.
  */
 
-import { shouldInject, TextSink } from '../extension';
-import { makeTerminal } from '../__mocks__/vscode';
+import { shouldInject, TextSink, activate } from '../extension';
+import * as vscodeStub from '../__mocks__/vscode';
+import { makeTerminal, makeDocument } from '../__mocks__/vscode';
 
 // Re-export type alias so tests read clearly
 type TerminalCache = WeakMap<TextSink, Map<string, string>>;
@@ -16,9 +18,33 @@ const FILE_B = '/workspace/analysis.Rmd';
 const CMD_1 = 'params <- list(n = 10)';
 const CMD_2 = 'params <- list(n = 20)';
 
+const RMD_WITH_PARAMS = `---
+title: Test
+params:
+  n: 10
+---
+`;
+
 function makeCache(): TerminalCache {
     return new WeakMap();
 }
+
+/** Minimal ExtensionContext stub — only subscriptions is needed. */
+function makeContext() {
+    return { subscriptions: { push: jest.fn() } };
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    vscodeStub.window.state.focused = true;
+    vscodeStub.window.activeTextEditor = undefined;
+    vscodeStub.window.activeTerminal = undefined;
+    vscodeStub.window.terminals = [];
+});
+
+// ---------------------------------------------------------------------------
+// shouldInject cache helper
+// ---------------------------------------------------------------------------
 
 describe('shouldInject', () => {
     it('returns true on first call for a terminal+file combination', () => {
@@ -73,5 +99,81 @@ describe('shouldInject', () => {
         shouldInject(cacheA, terminal, FILE_A, CMD_1);
         // cacheB is fresh — should still return true
         expect(shouldInject(cacheB, terminal, FILE_A, CMD_1)).toBe(true);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Window-focus guard (issue 2)
+// ---------------------------------------------------------------------------
+
+describe('activate — window focus guard', () => {
+    /**
+     * Calls activate and returns the handleEditor callback that was registered
+     * with onDidChangeActiveTextEditor.
+     */
+    function activateAndGetHandler() {
+        let registeredHandler: ((e: vscodeStub.TextEditor | undefined) => void) | undefined;
+        (vscodeStub.window.onDidChangeActiveTextEditor as jest.Mock).mockImplementation(
+            (cb: (e: vscodeStub.TextEditor | undefined) => void) => {
+                registeredHandler = cb;
+                return { dispose: jest.fn() };
+            },
+        );
+        activate(makeContext() as never);
+        return registeredHandler!;
+    }
+
+    it('does not inject params when the VS Code window does not have focus', () => {
+        vscodeStub.window.state.focused = false;
+        const terminal = makeTerminal('R');
+        vscodeStub.window.terminals = [terminal];
+        vscodeStub.window.activeTerminal = terminal;
+
+        const handleEditor = activateAndGetHandler();
+        const editor = { document: makeDocument(FILE_A, RMD_WITH_PARAMS) };
+        handleEditor(editor);
+
+        expect(terminal.sendText).not.toHaveBeenCalled();
+    });
+
+    it('injects params when the VS Code window has focus', () => {
+        vscodeStub.window.state.focused = true;
+        const terminal = makeTerminal('R');
+        vscodeStub.window.terminals = [terminal];
+        vscodeStub.window.activeTerminal = terminal;
+
+        const handleEditor = activateAndGetHandler();
+        const editor = { document: makeDocument(FILE_A, RMD_WITH_PARAMS) };
+        handleEditor(editor);
+
+        expect(terminal.sendText).toHaveBeenCalledWith('params <- list(n = 10)');
+    });
+
+    it('injects params when the window regains focus via onDidChangeWindowState', () => {
+        const terminal = makeTerminal('R');
+        vscodeStub.window.terminals = [terminal];
+        vscodeStub.window.activeTerminal = terminal;
+
+        const editor = { document: makeDocument(FILE_A, RMD_WITH_PARAMS) };
+        vscodeStub.window.activeTextEditor = editor;
+
+        let windowStateHandler: ((s: { focused: boolean }) => void) | undefined;
+        (vscodeStub.window.onDidChangeWindowState as jest.Mock).mockImplementation(
+            (cb: (s: { focused: boolean }) => void) => {
+                windowStateHandler = cb;
+                return { dispose: jest.fn() };
+            },
+        );
+
+        // Window starts unfocused — activate fires handleEditor on startup but skips
+        vscodeStub.window.state.focused = false;
+        activate(makeContext() as never);
+        expect(terminal.sendText).not.toHaveBeenCalled();
+
+        // Window regains focus — onDidChangeWindowState fires
+        vscodeStub.window.state.focused = true;
+        windowStateHandler!({ focused: true });
+
+        expect(terminal.sendText).toHaveBeenCalledWith('params <- list(n = 10)');
     });
 });
