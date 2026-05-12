@@ -2,7 +2,7 @@
     "name": "vscode-morrr",
     "displayName": "vscode-morrr",
     "description": "Auto-inject RMarkdown params into R terminal when an Rmd file is activated",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "publisher": "tomlink",
     "license": "GPL-3.0-only",
     "repository": {
