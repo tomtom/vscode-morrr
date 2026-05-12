@@ -13,6 +13,11 @@ export const window = {
     onDidChangeActiveTextEditor: jest.fn(() => ({ dispose: jest.fn() })),
     onDidChangeWindowState: jest.fn(() => ({ dispose: jest.fn() })),
     onDidCloseTerminal: jest.fn(() => ({ dispose: jest.fn() })),
+    showInformationMessage: jest.fn(),
+};
+
+export const commands = {
+    registerCommand: jest.fn(() => ({ dispose: jest.fn() })),
 };
 
 export const workspace = {

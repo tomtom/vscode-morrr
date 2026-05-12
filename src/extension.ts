@@ -122,42 +122,71 @@ export function shouldInject(
     return true;
 }
 
+/** The VS Code command identifier for the manual load-params command. */
+export const LOAD_PARAMS_COMMAND = 'vscode-morrr.loadParams';
+
 /**
  * Activates the extension, registering event listeners that automatically
- * inject RMarkdown params into an R terminal when an Rmd file is focused.
- * Injection only occurs while the VS Code window has focus.
+ * inject RMarkdown params into an R terminal when an Rmd file is focused,
+ * as well as a command for manual invocation from the command palette.
+ * Automatic injection only occurs while the VS Code window has focus.
  *
  * @param context - The VS Code extension context used to register disposables.
  * @returns void
- * @sideEffects Registers event listeners on `vscode.window`; sends text to R
- *              terminals via `terminal.sendText`.
+ * @sideEffects Registers event listeners and a command on `vscode.window` /
+ *              `vscode.commands`; sends text to R terminals via
+ *              `terminal.sendText`; may show info messages via
+ *              `vscode.window.showInformationMessage`.
  */
 export function activate(context: vscode.ExtensionContext): void {
     const cache: TerminalCache = new WeakMap();
 
-    const handleEditor = (editor: vscode.TextEditor | undefined) => {
+    /**
+     * Core injection logic shared by the automatic handler and the manual
+     * command.  Skips the window-focus check so the command always works.
+     *
+     * @param editor - The text editor to inject params from.
+     * @param manual - When true: bypass the change-detection cache (always
+     *                 send) and show info messages on failure.
+     *                 When false: skip if params are unchanged since last send.
+     */
+    const injectParams = (editor: vscode.TextEditor | undefined, manual: boolean) => {
         if (!editor) return;
-        if (!vscode.window.state.focused) return;
         const enabled = vscode.workspace.getConfiguration('vscode-morrr').get<boolean>('enabled', true);
         if (!enabled) return;
         const doc = editor.document;
         if (doc.languageId !== 'rmd' && !/\.Rmd$/i.test(doc.fileName)) return;
 
         const cmd = getParamsCommand(doc);
-        if (!cmd) return;
+        if (!cmd) {
+            if (manual) vscode.window.showInformationMessage('No params found in YAML metadata.');
+            return;
+        }
 
         const terminal = findRTerminal();
-        if (!terminal) return;
+        if (!terminal) {
+            if (manual) vscode.window.showInformationMessage('No R terminal found. Please open an R terminal first.');
+            return;
+        }
 
-        if (!shouldInject(cache, terminal, doc.uri.fsPath, cmd)) return;
+        if (!manual && !shouldInject(cache, terminal, doc.uri.fsPath, cmd)) return;
+        if (manual) shouldInject(cache, terminal, doc.uri.fsPath, cmd); // keep cache in sync
 
         terminal.sendText(cmd);
+    };
+
+    const handleEditor = (editor: vscode.TextEditor | undefined) => {
+        if (!vscode.window.state.focused) return;
+        injectParams(editor, false);
     };
 
     context.subscriptions.push(
         vscode.window.onDidChangeActiveTextEditor(handleEditor),
         vscode.window.onDidChangeWindowState(state => {
             if (state.focused) handleEditor(vscode.window.activeTextEditor);
+        }),
+        vscode.commands.registerCommand(LOAD_PARAMS_COMMAND, () => {
+            injectParams(vscode.window.activeTextEditor, true);
         }),
     );
 

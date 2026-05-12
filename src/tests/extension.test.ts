@@ -6,7 +6,7 @@
  * host is required.
  */
 
-import { shouldInject, TextSink, activate } from '../extension';
+import { shouldInject, TextSink, activate, LOAD_PARAMS_COMMAND } from '../extension';
 import * as vscodeStub from '../__mocks__/vscode';
 import { makeTerminal, makeDocument } from '../__mocks__/vscode';
 
@@ -175,5 +175,98 @@ describe('activate — window focus guard', () => {
         windowStateHandler!({ focused: true });
 
         expect(terminal.sendText).toHaveBeenCalledWith('params <- list(n = 10)');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Manual command (issue 3)
+// ---------------------------------------------------------------------------
+
+describe('activate — loadParams command', () => {
+    /**
+     * Calls activate and returns the callback registered for LOAD_PARAMS_COMMAND.
+     */
+    function activateAndGetCommand(): () => void {
+        let commandHandler: (() => void) | undefined;
+        (vscodeStub.commands.registerCommand as jest.Mock).mockImplementation(
+            (id: string, cb: () => void) => {
+                if (id === LOAD_PARAMS_COMMAND) commandHandler = cb;
+                return { dispose: jest.fn() };
+            },
+        );
+        activate(makeContext() as never);
+        return commandHandler!;
+    }
+
+    it('sends params to the R terminal when invoked manually', () => {
+        const terminal = makeTerminal('R');
+        vscodeStub.window.terminals = [terminal];
+        vscodeStub.window.activeTerminal = terminal;
+        vscodeStub.window.activeTextEditor = { document: makeDocument(FILE_A, RMD_WITH_PARAMS) };
+
+        const runCommand = activateAndGetCommand();
+        runCommand();
+
+        expect(terminal.sendText).toHaveBeenCalledWith('params <- list(n = 10)');
+    });
+
+    it('sends params even when the window does not have focus', () => {
+        vscodeStub.window.state.focused = false;
+        const terminal = makeTerminal('R');
+        vscodeStub.window.terminals = [terminal];
+        vscodeStub.window.activeTerminal = terminal;
+        vscodeStub.window.activeTextEditor = { document: makeDocument(FILE_A, RMD_WITH_PARAMS) };
+
+        const runCommand = activateAndGetCommand();
+        runCommand();
+
+        expect(terminal.sendText).toHaveBeenCalledWith('params <- list(n = 10)');
+    });
+
+    it('sends params even when they are unchanged since last injection', () => {
+        // Start unfocused so activate's startup handleEditor call is a no-op
+        vscodeStub.window.state.focused = false;
+        const terminal = makeTerminal('R');
+        vscodeStub.window.terminals = [terminal];
+        vscodeStub.window.activeTerminal = terminal;
+        vscodeStub.window.activeTextEditor = { document: makeDocument(FILE_A, RMD_WITH_PARAMS) };
+
+        const runCommand = activateAndGetCommand();
+
+        vscodeStub.window.state.focused = true;
+        runCommand(); // first manual call
+        runCommand(); // second manual call — params unchanged, but manual so must send again
+
+        expect(terminal.sendText).toHaveBeenCalledTimes(2);
+    });
+
+    it('shows an info message when no R terminal is open', () => {
+        vscodeStub.window.terminals = [];
+        vscodeStub.window.activeTerminal = undefined;
+        vscodeStub.window.activeTextEditor = { document: makeDocument(FILE_A, RMD_WITH_PARAMS) };
+
+        const runCommand = activateAndGetCommand();
+        runCommand();
+
+        expect(vscodeStub.window.showInformationMessage).toHaveBeenCalledWith(
+            'No R terminal found. Please open an R terminal first.',
+        );
+    });
+
+    it('shows an info message when the active document has no params', () => {
+        const terminal = makeTerminal('R');
+        vscodeStub.window.terminals = [terminal];
+        vscodeStub.window.activeTerminal = terminal;
+        vscodeStub.window.activeTextEditor = {
+            document: makeDocument(FILE_A, '---\ntitle: No params here\n---\n'),
+        };
+
+        const runCommand = activateAndGetCommand();
+        runCommand();
+
+        expect(vscodeStub.window.showInformationMessage).toHaveBeenCalledWith(
+            'No params found in YAML metadata.',
+        );
+        expect(terminal.sendText).not.toHaveBeenCalled();
     });
 });

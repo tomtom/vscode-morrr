@@ -29,6 +29,20 @@
                     "description": "Enable automatic injection of RMarkdown params into the R terminal when an Rmd file is activated."
                 }
             }
+        },
+        "commands": [
+            {
+                "command": "vscode-morrr.loadParams",
+                "title": "R: Load params from YAML metadata"
+            }
+        ],
+        "menus": {
+            "commandPalette": [
+                {
+                    "command": "vscode-morrr.loadParams",
+                    "when": "editorLangId == rmd"
+                }
+            ]
         }
     },
     "scripts": {
