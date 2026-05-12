@@ -2,4 +2,3 @@ AGENTS.md
 docs/rules-code-navigation.md
 out/
 node_modules/
-*.vsix
